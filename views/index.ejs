@@ -1,0 +1,76 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Socket.IO chat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font: 13px Helvetica, Arial; }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(130, 224, 255); border: none; padding: 10px; }
+      #messages { list-style-type: none; margin: 0; padding: 0; }
+      #messages li { padding: 5px 10px; }
+      #messages li:nth-child(odd) { background: #eee; }
+    </style>
+  </head>
+  <body>
+    <ul id="messages"></ul>
+    <form action="">
+      <input id="m" autocomplete="off" /><button>Send</button>
+    </form>
+    <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+    <script>
+      var socket = io();
+      var coords = 
+      [{'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.498676', 'longitude': '153.014230'}},
+      {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.498768', 'longitude': '153.014263'}},
+      {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.498840', 'longitude': '153.014285'}},
+      {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.498959', 'longitude': '153.014323'}},
+      {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.499064', 'longitude': '153.014361'}},
+      {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.499278', 'longitude': '153.014424'}},
+      {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.499326', 'longitude': '153.014446'}},
+      {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.499302', 'longitude': '153.014429'}},
+      {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.499386', 'longitude': '153.014462'}},
+      {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.499467', 'longitude': '153.014503'}},
+      {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.499434', 'longitude': '153.014605'}}];
+      var count = 0;
+      var forward = true;
+      socket.emit('new user', {'user': {'id': '1234', 'name': 'Peter'}, 'coords': {'latitude': '-27.498676', 'longitude': '153.014230'}})
+      setInterval(runUser,1000);
+      $('form').submit(function(){
+        // socket.emit('report coords', $('#m').val());
+        $('#m').val('');
+        return false;
+      });
+      socket.on('setup', function(users) {
+        $('#messages').append($('<li>').text(users.user.name));
+      })
+      socket.on('res coords', function(data) {
+        $('#messages').append($('<li>').text(data));
+      })
+      // socket.on('report coords', function(msg){
+      //   $('#messages').append($('<li>').text(msg));
+      // });
+      function runUser() {
+          if(forward) {
+            socket.emit('report coords', coords[count]);
+            $('#messages').append($('<li>').text(count));
+            count = count + 1;
+            if(count == 10) {
+              forward = false;
+            }
+          } else {
+            count = count -1;
+            socket.emit('report coords', coords[count]);
+            $('#messages').append($('<li>').text(count));
+            if(count == 0) {
+              forward = true;
+            }
+        }
+
+        // socket.emit('report coords')
+      }
+    </script>
+  </body>
+</html>

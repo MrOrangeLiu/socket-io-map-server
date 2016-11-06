@@ -1,0 +1,173 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var app = require('../app');
+var debug = require('debug')('socketio:server');
+var http = require('http');
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || '8082');
+app.set('port', port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+var io = require('socket.io')(server);
+
+/**
+ * To record users and connections
+ */
+users = [];
+connections = [];
+
+/**
+ * Listen for connection
+ */
+
+io.on('connection', function(socket){
+
+  // var initData = '';
+  // connections.map(function(data) {
+  //   initData = initData + ', ' + data.id
+  // })
+
+  // Send records to a new connected user
+  if(users){
+    // console.log(users)
+    users.map(function(user){
+      socket.emit('setup', {'user': {'id': user.user.id, 'name': user.user.name}, 'coords': {'latitude': user.coords.latitude, 'longitude': user.coords.longitude}});
+      // console.log(user.toString())
+    })
+    // socket.emit('setup', users.toString());
+  }
+
+  // Record connections
+  connections.push(socket);
+  console.log('a user connect, Connected: %d', connections.length);
+
+  // Record a new user
+  socket.on('new user', function(user_info) {
+    // console.log('new user: ' + user_info + ' with socket:' + socket.id);
+    users.push({'user': user_info.user, 'coords': user_info.coords, 'socket': socket});
+    console.log('new user is: ' + user_info.user.name + 'latitude:' + user_info.coords.latitude + ', socket id is:' + socket.id)
+    console.log('Successfully signed in！, Current users：'+users.length)
+    // users.map(function(data){
+    //   console.log(data.user.id)
+    // })
+  });
+
+  socket.on('report coords', function(user_info){
+    var updatedUsr = null;
+    users.map(function(data) {
+      if(data.socket.id === socket.id) {
+        console.log('old coords:' + data.coords)
+        data.coords = user_info.coords;
+        updatedUsr = data; // including socket
+        console.log('new coords: '+ user_info.coords)
+        io.emit('res coords', {'user': data.user, 'coords': data.coords}) // without socket
+        return;
+    }
+    });
+    // socket.broadcast.emit('res coords', user_info)
+  });
+
+  // socket.on('report coords', function(msg){
+  //   console.log(socket.id)
+  //   console.log(msg)
+  //   // socket.broadcast.emit('report coords', msg)
+  //   io.emit('report coords', msg)
+  // });
+
+  socket.on('disconnect', function(){
+    connections.splice(connections.indexOf(socket), 1);
+    console.log('a user disconnected, connected: %d', connections.length);
+    var disConnectedUsr = null;
+    users.map(function(data) {
+      if(data.socket.id === socket.id) {
+        console.log(data.user.name + ',' + socket.id)
+        disConnectedUsr = data;
+        return;
+      }
+    })
+    if(disConnectedUsr){
+      users.splice(users.indexOf(disConnectedUsr))
+      console.log('Successfully deleted logged out users from list！, Remain users：'+users.length)
+    }
+});
+});
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+server.listen(port);
+server.on('error', onError);
+server.on('listening', onListening);
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== 'listen') {
+    throw error;
+  }
+
+  var bind = typeof port === 'string'
+    ? 'Pipe ' + port
+    : 'Port ' + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case 'EACCES':
+      console.error(bind + ' requires elevated privileges');
+      process.exit(1);
+      break;
+    case 'EADDRINUSE':
+      console.error(bind + ' is already in use');
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === 'string'
+    ? 'pipe ' + addr
+    : 'port ' + addr.port;
+  debug('Listening on ' + bind);
+}
